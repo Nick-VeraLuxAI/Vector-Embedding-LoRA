@@ -1,0 +1,147 @@
+# Vector Triplet Dataset Generator
+
+This project is a **high-performance, multi-threaded dataset generator** for contrastive learning in vector databases, using **Meta-LLaMA-3-8B-Instruct** via `llama.cpp` servers.
+
+It takes in **per-domain anchors**, generates semantically similar (positive) and unrelated (negative) variants, and outputs structured triplets ideal for training LoRAs or fine-tuning vector embedding models.
+
+---
+
+## 🚀 Features
+
+* Multi-port **load-balanced inference** using LLaMA server
+* **Buffered JSONL writer** to avoid I/O bottlenecks
+* Custom **domain-based sampling strategy**
+* Automatically **reshuffles and reuses anchors**
+* Optional **token length histogram analysis**
+
+---
+
+## 🧠 Vector Server Setup
+
+Start one or more LLaMA server instances using:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 ~/YOUR-FILEPATH-HERE/llama.cpp/build/bin/llama-server \
+  -m /YOUR-FILEPATH-HERE/Meta-Llama-3-8B-Instruct.Q6_K.gguf \
+  --port 8080 \
+  --ctx-size 1792 \
+  --n-gpu-layers 256
+```
+
+Repeat for additional ports/GPUs, such as `8081`, `8082`, `8083`.
+
+> **Note:** All servers must use the same model and context size for consistent behavior.
+
+---
+
+## 📦 Anchor Format
+
+Input anchor files should be located in the folder passed via `--anchors`, with one `.jsonl` file per domain:
+
+**Example:** `./content/reflection.jsonl`
+
+```json
+{"text": "I'm feeling overwhelmed by all the tasks on my plate."}
+{"text": "It's hard to stay focused today."}
+```
+
+Each entry must contain a `text` field. The filename determines the domain.
+
+Fallback anchors are used if none are provided.
+
+---
+
+## 🏗️ Run the Script
+
+Navigate to your working directory:
+
+```bash
+cd /home/ndesantis/Desktop/Vector-DB-LoRA/JSONL-Generation-Engine
+```
+
+Then run:
+
+```bash
+python3 vector-bank-generator.py \
+  --count 250000 \
+  --threads 12 \
+  --anchors ./content \
+  --analyze
+```
+
+### Arguments:
+
+* `--count`: Total number of triplets to generate (up to sum of all `DOMAIN_TARGETS`)
+* `--threads`: Number of concurrent worker threads
+* `--anchors`: Path to anchor directory
+* `--output`: Custom output filename (default: timestamped file in `./content/`)
+* `--analyze`: Run token length analysis + histogram after generation
+
+---
+
+## 📄 Output Format
+
+Outputs are saved in `.jsonl` format, one triplet per line:
+
+```json
+{
+  "anchor": "I need to remember to submit that report before noon.",
+  "positive": "Don't forget to turn in the document before 12.",
+  "negative": "It might rain later this week.",
+  "domain": "goals",
+  "token_length": 47
+}
+```
+
+---
+
+## 📊 Analysis Mode
+
+If `--analyze` is passed, the script will:
+
+* Compute token length distribution
+* Show a histogram
+* Print token stats (max, avg, 95th/99th percentiles)
+
+---
+
+## ⚙️ System Requirements
+
+* CUDA-compatible GPU (required by llama.cpp server)
+* Python 3.8+
+* `transformers`, `matplotlib`, `tqdm` installed:
+
+```bash
+pip install transformers matplotlib tqdm
+```
+
+---
+
+## 🧪 Testing & Debugging
+
+* Logs print anchor domains, token lengths, and max token spikes
+* Threads write in real-time using a background buffer
+* JSON validity is checked and invalid completions are skipped
+
+---
+
+## 🧠 Use Case
+
+This generator is ideal for creating **contrastive triplet datasets** for:
+
+* Embedding model training
+* Semantic similarity search
+* Vector DB LoRA fine-tuning
+* Reasoning memory retrieval modules
+
+---
+
+## 📬 Contact
+
+Created by Nicholas De Santis | [VeraLux AI](nick@veralux.ai)
+
+For licensing or commercial deployment, reach out directly.
+
+---
+
+Happy vectorizing! 🧠⚡

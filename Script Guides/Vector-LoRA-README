@@ -1,0 +1,137 @@
+Vector Embedding LoRA Trainer
+
+This script fine-tunes a vector embedding LoRA on a dataset of triplet-format JSONL data (anchor, positive). It's optimized for training on multi-GPU setups using PyTorch's distributed capabilities. The goal is to train a LoRA adapter for use in a vector-based semantic memory system (e.g., for a hybrid memory AI like Vera).
+
+🧠 Overview
+
+Model: mistralai/Mistral-7B-Instruct-v0.1
+
+Dataset: JSONL with fields: anchor, positive
+
+Batching: Effective batch size of batch_size × gradient_accumulation = 10 × 5 = 50
+
+GPU: Supports multi-GPU via torchrun
+
+Logging: TensorBoard
+
+Checkpointing: Robust, verified, with auto-resume support
+
+🛠️ Usage
+
+# 1. Activate your virtualenv
+source ~/lora-env/bin/activate
+
+# 2. Ensure write permissions on the output directory
+sudo chown -R $USER:$USER /media/ndesantis/PS22001/LoRA/LoRA_FIles/lora-vector
+
+# 3. Start training on 2 GPUs
+torchrun --nproc_per_node=2 /home/ndesantis/Desktop/Vector-DB-LoRA/JSONL-Refinement-Engine/vector-lora-trainer.py
+
+# 4. Monitor with TensorBoard
+tensorboard --logdir="/media/ndesantis/PS22001/LoRA/LoRA_FIles/lora-vector/runs"
+
+⚙️ Configuration Highlights
+
+🔢 Batch & Training Setup
+
+batch_size = 10 (train), 8 (val)
+
+accum_steps = 5
+
+epochs = 2
+
+num_workers = 8 (train), 4 (val)
+
+max_length = 96 (tokens per pair)
+
+📦 LoRA Config
+
+LoraConfig(
+    r=64,
+    lora_alpha=32,
+    lora_dropout=0.05,
+    bias="none",
+    target_modules=[auto-detected linear layers],
+    task_type="CAUSAL_LM"
+)
+
+📈 Optimization Tips
+
+Area
+
+How to Optimize
+
+Token Length
+
+Adjust max_length=96 via histogram preview; 99th percentile is printed
+
+Batch Size
+
+Increase batch_size if VRAM allows; tune accum_steps to balance memory usage
+
+Checkpointing
+
+Tune global_step % 250 checkpoint interval
+
+Validation
+
+Add a separate dev set or change val_batches >= 10 for deeper validation
+
+TensorBoard
+
+Add more writer.add_scalar() for metrics like LR, gradient norms, memory usage
+
+Learning Rate
+
+Default 2e-4 is aggressive — can tune based on loss curves
+
+Precision
+
+Uses bfloat16 — stable, but test float16 if you're memory-bound
+
+Resume
+
+Auto-resume from last good checkpoint; can delete corrupt ones on failure
+
+🧪 Metrics Logged to TensorBoard
+
+train/loss
+
+val/loss
+
+perf/tokens_per_sec
+
+perf/approx_cost_usd
+
+📂 Checkpoints
+
+Saved to:
+
+/media/ndesantis/PS22001/LoRA/LoRA_FIles/lora-vector/checkpoint-*/
+
+Each checkpoint includes:
+
+adapter_model.safetensors
+
+tokenizer config
+
+full_state.pt (epoch, optimizer, global_step)
+
+Automatic save verification ensures no corrupted checkpoints persist.
+
+🔄 Resumption Logic
+
+If checkpoint found → loads model, optimizer, epoch, and step
+
+Skips previously trained steps in the dataloader
+
+Can resume from partial epoch after crash or shutdown
+
+✅ TODO / Enhancements
+
+
+
+📍 Author Notes
+
+This script is part of the Vera Vector Memory LoRA pipeline, used to power hybrid semantic memory in autonomous AI systems. Designed for scale, fault tolerance, and rapid iteration.
+

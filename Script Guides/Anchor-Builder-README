@@ -1,0 +1,148 @@
+# Anchor Builder for Semantic Memory Dataset Generation
+
+This tool is designed to auto-generate high-quality anchor phrases across multiple semantic domains for use in contrastive training of vector databases and memory-enhanced AI systems.
+
+---
+
+## 🚀 Purpose
+
+Generates JSONL files of domain-specific thought anchors (e.g., "reflection", "goals", "task") using a local LLaMA-based language model. These anchors serve as the foundational seed examples for contrastive triplet generation or embedding model training.
+
+---
+
+## 🧠 Domains Covered
+
+* `reflection`
+* `goals`
+* `task`
+* `observation`
+* `tool`
+* `knowledge`
+* `chat`
+
+Each domain is paired with a representative example and targeted count (default 1000–1200 anchors).
+
+---
+
+## 📦 Output Format
+
+Anchors are saved in JSONL format inside `content/`, with one file per domain:
+
+```json
+{"domain": "goals", "text": "I want to build a prototype this month."}
+{"domain": "reflection", "text": "I feel like I'm running on empty lately."}
+```
+
+---
+
+## 🛠️ Running the Server
+
+Ensure your local LLaMA server is running first:
+
+```bash
+/YOUR-FILEPATH-HERE/llama.cpp/build/bin/llama-server \
+  --model "/YOUR-FILEPATH-HERE/Meta-Llama-3-8B-Instruct.Q6_K.gguf" \
+  --port 8080 \
+  --threads 12 \
+  --n-gpu-layers 100
+```
+
+---
+
+## 🧪 Run Script
+
+From within the `JSONL-Generation-Engine` folder:
+
+```bash
+python3 anchor-builder.py
+```
+
+### Optional Arguments:
+
+* `--per_request`: Number of anchors to generate per API call (default: 20)
+* `--target`: Override per-domain anchor count (e.g., `--target 500` to collect 500 for each domain)
+
+---
+
+## 📈 Built-in Token Analysis
+
+After generation, the script:
+
+* Tracks token lengths of prompt + response
+* Generates a histogram plot
+* Outputs stats (max, average, 95th/99th percentile)
+
+This ensures anchor examples remain within model-safe bounds.
+
+---
+
+## 🧵 Thread Auto-Analyzer
+
+On startup, the script prints your system's logical thread count and recommends optimal thread usage for inference workloads.
+
+---
+
+## 🧱 Prompt Format (per domain call)
+
+```text
+You are helping build a semantic memory system for the domain of "goals".
+
+Given this example:
+"I want to finish my portfolio by next week."
+
+Generate exactly 20 semantically diverse, realistic thoughts in the "goals" category.
+
+Respond ONLY with a valid JSON array of strings:
+["...", "...", ...]
+```
+
+---
+
+## 💡 Use Cases
+
+* Pretraining memory LoRAs
+* Triplet generation pipelines
+* Bootstrapping new vector DBs
+* Contrastive learning datasets
+
+---
+
+## 🖇️ Requirements
+
+* Python 3.8+
+* `requests`, `matplotlib`, `argparse`
+* A running `llama-server` supporting OpenAI-like chat completions
+
+---
+
+## 🔁 Retry & Validation
+
+* Retries up to 3 times on API errors or malformed JSON
+* Automatically trims anchors longer than 100 tokens
+* Uses a JSON parser with fallback if model outputs are noisy
+
+---
+
+## 📁 Output Directory
+
+Anchors are saved to:
+
+```
+/home/ndesantis/Desktop/Vector-DB-LoRA/JSONL-Generation-Engine/content/
+```
+
+---
+
+## ✅ Example Usage:
+
+```bash
+python3 anchor-builder.py --per_request 30 --target 500
+```
+
+This generates 500 anchors per domain in batches of 30.
+
+---
+
+## 🧠 Pro Tip:
+
+Pair this anchor builder with the triplet generator (`vector-bank-generator.py`) to create full training datasets for vector database learning or semantic memory alignment.
